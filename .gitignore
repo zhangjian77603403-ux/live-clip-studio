@@ -1,0 +1,42 @@
+# 构建产物
+build/
+build_*/
+dist/
+dist_*/
+*.spec.bak
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 运行缓存与日志
+cache/
+logs/
+*.log
+
+# 本地配置（含个人路径）
+config.json
+gpu_admission.json
+
+# 备份文件
+*.bak
+*.bak_*
+*_backup_*
+backup_*
+
+# 素材与产出（绝对不要提交：含真人形象、商品图、品牌信息）
+视频项目/
+*.mp4
+*.mov
+*.wav
+*.ass
+*.srt
+!assets/demo-*
+
+# 系统
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live Clip Studio</title>
+<style>
+  :root{
+    --paper:#F4F1EA; --card:#FFFFFF; --ink:#26241F; --ink2:#4E4940;
+    --mut:#8C8578; --line:#E3DCCE; --line2:#EFEAE0; --acc:#D97757;
+    --ok:#5C7C5A; --warn:#A9713B; --bad:#A6493C;
+    --sans:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",-apple-system,"Segoe UI",sans-serif;
+    --mono:"SF Mono","Cascadia Mono",Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);
+       font-size:14px;-webkit-font-smoothing:antialiased;overflow:hidden}
+  .shell{display:grid;grid-template-columns:340px 1fr;height:100vh}
+
+  aside{border-right:1px solid var(--line);display:flex;flex-direction:column;
+        background:linear-gradient(180deg,#F8F5EF 0%,#F2EEE6 100%)}
+  .brand{padding:26px 24px 15px;border-bottom:1px solid var(--line)}
+  .brand h1{font-size:17px;font-weight:600;letter-spacing:3px;line-height:1.5}
+  .brand .en{margin-top:7px;font-family:var(--mono);font-size:9.5px;letter-spacing:2.2px;
+             color:var(--mut);text-transform:uppercase}
+  .stats{display:flex;justify-content:space-between;gap:10px;margin-top:15px;padding-top:13px;border-top:1px dashed var(--line)}
+  .stats div{display:flex;flex-direction:column;gap:2px}
+  .stats b{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--acc);letter-spacing:-.5px}
+  .stats span{font-size:10px;color:var(--mut);letter-spacing:1.2px}
+
+  nav{flex:1;overflow-y:auto;padding:10px 11px 8px}
+  nav::-webkit-scrollbar{width:7px}
+  nav::-webkit-scrollbar-thumb{background:#D8D0C0;border-radius:4px}
+  .item{padding:9px 10px;border-radius:10px;cursor:pointer;position:relative;
+        border:1px solid transparent;transition:background .16s,border-color .16s;
+        display:flex;gap:10px;align-items:center}
+  .item .th{width:52px;height:34px;object-fit:cover;border-radius:5px;flex-shrink:0;
+            background:#17150F;border:1px solid #D6CCBA}
+  .item .tx{min-width:0;flex:1}
+  .item:hover{background:#EFEAE0}
+  .item.on{background:var(--card);border-color:var(--line);box-shadow:0 2px 10px rgba(60,50,36,.06)}
+  .item.on::before{content:"";position:absolute;left:0;top:11px;bottom:11px;width:2.5px;
+                   background:var(--acc);border-radius:2px}
+  .item .t{font-size:12.5px;font-weight:600;line-height:1.4;overflow:hidden;
+           text-overflow:ellipsis;white-space:nowrap}
+  .item .m{margin-top:4px;display:flex;gap:6px;align-items:center;
+           font-size:10px;color:var(--mut);font-family:var(--mono)}
+  .dot{width:3px;height:3px;border-radius:50%;background:var(--mut);opacity:.6}
+  .code{font-family:var(--mono);font-size:10px;color:var(--acc);letter-spacing:.5px}
+  .item .del{flex-shrink:0;width:20px;height:20px;padding:0;border-radius:6px;
+             border:1px solid transparent;background:none;color:#B9B09F;
+             font-size:14px;line-height:1;display:flex;align-items:center;
+             justify-content:center;opacity:0;transition:.15s}
+  .item:hover .del,.item.on .del{opacity:.7}
+  .item .del:hover{opacity:1;background:#F8E6DE;color:#B4472A;border-color:#EBC7B8}
+  .item .del.arm{opacity:1;width:auto;padding:0 7px;background:#B4472A;color:#FDF7F0;
+                 border-color:#B4472A;font-size:10px;letter-spacing:.5px}
+  .item .pill{display:inline-block;font-size:9px;padding:1px 5px;border-radius:4px;
+              background:#F1EADF;color:#8C8578;font-family:var(--mono);letter-spacing:.4px}
+  .item .pill.wait{background:#FBEEE8;color:#B4472A}
+  .item .th.wait{display:flex;align-items:center;justify-content:center;font-size:9px;
+                 color:#A99E8B;background:#F6F1E7;border:1px dashed #DCD2BF;letter-spacing:.5px}
+
+  button.primary{background:#B4472A;border-color:#B4472A;color:#FDF7F0}
+  button.primary:hover{background:#9E3D22;border-color:#9E3D22;color:#fff}
+  button.auto{background:#46654A;border-color:#46654A;color:#F6F2E9;font-weight:600}
+  button.auto:hover{background:#395340;border-color:#395340;color:#fff}
+  button.auto.on{box-shadow:0 0 0 3px rgba(70,101,74,.18)}
+
+  .dlg{position:fixed;inset:0;background:rgba(28,24,18,.42);display:none;
+       align-items:center;justify-content:center;z-index:120;padding:24px}
+  .dlg.on{display:flex}
+  .dlg .box{width:min(560px,100%);background:var(--card);border-radius:14px;border:1px solid var(--line);
+            box-shadow:0 24px 70px rgba(40,32,20,.34);padding:24px 26px 18px}
+  .dlg h2{font-size:16px;font-weight:600;letter-spacing:.5px}
+  .dlg .sub{margin-top:7px;font-size:11px;color:var(--mut);line-height:1.75}
+  .fb{margin-top:17px}
+  .fb label{display:block;font-size:10px;letter-spacing:1.5px;color:var(--mut);margin-bottom:7px}
+  .fb input,.fb select{width:100%;font-family:var(--sans);font-size:13px;color:var(--ink);
+    background:#FBF7EF;border:1px solid var(--line);border-radius:8px;padding:9px 11px;outline:none}
+  .fb input:focus,.fb select:focus{border-color:var(--acc);background:#fff}
+  .fb input:disabled{color:var(--mut);background:#F3EEE4}
+  .frow{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .tprev{margin-top:9px;display:flex;gap:11px;align-items:center}
+  .tprev img{width:50px;height:62px;object-fit:cover;border-radius:6px;
+             border:1px solid var(--line);background:#F6F1E7}
+  .tprev span{font-size:11px;color:var(--mut);line-height:1.65}
+  .dlg .act{display:flex;justify-content:flex-end;gap:9px;margin-top:22px}
+
+  .runbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  .runbar .runmsg{font-size:11px;color:var(--mut);font-family:var(--mono)}
+  .prog{height:4px;background:#EDE6D9;border-radius:3px;overflow:hidden;margin-top:12px}
+  .prog i{display:block;height:100%;width:0;background:var(--acc);transition:width .3s}
+  .runlog{margin-top:12px;font-family:var(--mono);font-size:10.5px;line-height:1.75;
+          color:var(--ink2);background:#F7F2E8;border:1px solid var(--line);border-radius:9px;
+          padding:11px 13px;max-height:180px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+  .cands{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}
+  .cand{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
+  .cand img{display:block;width:100%;height:190px;object-fit:cover;background:#F6F1E7;cursor:zoom-in}
+  .cand button{width:100%;border:none;border-top:1px solid var(--line2);border-radius:0;
+               padding:8px 0;font-size:11px}
+  .cand button:hover{background:#FBEEE8}
+
+  .tools{padding:12px 15px 15px;border-top:1px solid var(--line);
+         display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  button{font-family:var(--sans);font-size:12px;letter-spacing:.8px;cursor:pointer;
+         border:1px solid var(--line);background:var(--card);color:var(--ink2);
+         padding:7px 12px;border-radius:7px;transition:.15s}
+  button.off,button:disabled{opacity:.38;cursor:not-allowed;filter:grayscale(.45)}
+  button.off:hover,button:disabled:hover{opacity:.38}
+  button:hover{border-color:var(--acc);color:var(--acc)}
+  .ts{font-family:var(--mono);font-size:10px;color:var(--mut)}
+
+  main{overflow-y:auto;padding:28px 36px 60px}
+  main::-webkit-scrollbar{width:9px}
+  main::-webkit-scrollbar-thumb{background:#DCD4C4;border-radius:5px}
+
+  .head{display:flex;justify-content:space-between;align-items:flex-start;gap:24px}
+  .head h2{font-size:24px;font-weight:600;letter-spacing:.5px;line-height:1.4}
+  .kind{display:inline-flex;align-items:center;gap:9px;margin-bottom:9px;
+        font-family:var(--mono);font-size:10px;letter-spacing:1.8px;color:var(--acc)}
+  .path{margin-top:9px;font-family:var(--mono);font-size:10.5px;color:var(--mut);
+        word-break:break-all;max-width:720px;line-height:1.6}
+
+  .cols{display:grid;gap:34px;align-items:start;margin-top:20px;
+        grid-template-columns:minmax(260px,38%) 1fr}
+  .stage{width:fit-content;max-width:100%;background:#17150F;border-radius:14px;
+         overflow:hidden;border:1px solid #2A261E}
+  .stage video{display:block;max-height:56vh;max-width:100%;background:#17150F}
+  .stage .none{padding:70px 70px;color:#8C8578;font-size:13px;text-align:center}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
+  .chip{font-size:11.5px;padding:6px 11px;border-radius:20px;border:1px solid var(--line);
+        background:var(--card);color:var(--ink2);cursor:pointer;transition:.15s;
+        display:flex;align-items:center;gap:6px}
+  .chip:hover{border-color:#D9B9A6}
+  .chip.on{background:#FBEEE8;border-color:#E2B49C;color:#9E5230}
+  .chip em{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--mut)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+  .asset{border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--card)}
+  .asset img{display:block;width:100%;height:150px;object-fit:cover;cursor:zoom-in;background:#EFEAE0}
+  .asset .cap{padding:7px 10px;font-size:10px;letter-spacing:1.4px;color:var(--mut);
+              border-top:1px solid var(--line2)}
+  .asset .none{height:150px;display:flex;align-items:center;justify-content:center;
+               color:var(--mut);font-size:11px;background:#F7F3EB}
+
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .mt{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px 12px}
+  .mt span{display:block;font-size:9.5px;letter-spacing:1.3px;color:var(--mut)}
+  .mt b{display:block;margin-top:5px;font-family:var(--mono);font-size:15px;
+        font-weight:600;letter-spacing:-.3px}
+  .mt b.g{color:var(--ok)} .mt b.w{color:var(--warn)} .mt b.b{color:var(--bad)}
+
+  .sect{margin-top:24px}
+  .sect h3{font-size:10.5px;letter-spacing:2.4px;color:var(--mut);font-weight:500;
+           padding-bottom:8px;border-bottom:1px solid var(--line);
+           display:flex;justify-content:space-between;align-items:baseline}
+  .sect h3 em{font-style:normal;font-family:var(--mono);font-size:9.5px;letter-spacing:.5px}
+
+  .strip{display:flex;gap:8px;overflow-x:auto;padding:14px 2px 10px}
+  .strip::-webkit-scrollbar{height:7px}
+  .strip::-webkit-scrollbar-thumb{background:#D8D0C0;border-radius:4px}
+  .shot{flex-shrink:0;width:104px;cursor:zoom-in}
+  .shot img{width:104px;height:168px;object-fit:cover;border-radius:7px;
+            border:1px solid var(--line);background:#17150F;display:block}
+  .shot i{display:block;margin-top:5px;font-style:normal;font-family:var(--mono);
+          font-size:9.5px;color:var(--mut);text-align:center;letter-spacing:.6px}
+
+  .notes{border:1px solid var(--line);border-radius:0 10px 10px 0;
+         border-left:2.5px solid var(--acc);background:var(--card);
+         padding:13px 16px;font-size:12px;line-height:1.85;color:var(--ink2)}
+  .notes ul{margin:8px 0 0 15px} .notes li{margin:3px 0}
+  .kv{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+  .kv i{font-style:normal;font-size:10.5px;padding:4px 9px;border-radius:6px;
+        background:#F3EEE4;color:var(--ink2);font-family:var(--mono)}
+
+  .row{display:flex;align-items:center;justify-content:space-between;gap:14px;
+       padding:8px 2px;border-bottom:1px solid var(--line2)}
+  .row .n{font-family:var(--mono);font-size:11px;color:var(--ink2);overflow:hidden;
+          text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+  .row .n:hover{color:var(--acc);text-decoration:underline;text-underline-offset:3px}
+  .row .mini{font-size:10.5px;color:var(--mut);cursor:pointer;border:none;background:none;
+             padding:3px 6px;border-radius:5px}
+  .row .mini:hover{color:var(--acc);background:#F7F1E9}
+
+  .blank{height:100%;display:flex;flex-direction:column;align-items:center;
+         justify-content:center;gap:13px;color:var(--mut)}
+  .blank .big{font-size:14px;letter-spacing:4px}
+  .blank .sm{font-family:var(--mono);font-size:10.5px;letter-spacing:1.4px;opacity:.7}
+
+  .lb{position:fixed;inset:0;background:rgba(28,24,18,.86);display:none;
+      align-items:center;justify-content:center;z-index:99;cursor:zoom-out}
+  .lb.on{display:flex}
+  .lb img{max-width:92vw;max-height:92vh;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+
+  @media (max-width:1050px){
+    .shell{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+    aside{max-height:38vh;border-right:none;border-bottom:1px solid var(--line)}
+    main{padding:20px 18px 50px}
+    .cols{grid-template-columns:1fr}
+    .head h2{font-size:19px}
+    .metrics{grid-template-columns:repeat(2,1fr)}
+  }
+.toast{position:fixed;left:50%;bottom:42px;transform:translate(-50%,14px);background:#26241F;
+  color:#F4F1EA;font-size:12px;letter-spacing:.6px;padding:10px 18px;border-radius:999px;
+  opacity:0;pointer-events:none;transition:.22s;z-index:99;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+/* 提示词弹层 */
+#pdlg .box{width:min(860px,94vw);max-height:88vh;overflow:auto}
+#pdlg textarea{width:100%;min-height:58px;resize:vertical;font-family:var(--mono);
+  font-size:11px;line-height:1.6;background:#FBF7EF;border:1px solid var(--line2);
+  border-radius:8px;padding:9px 10px;color:var(--ink)}
+#pdlg textarea:focus{outline:none;border-color:var(--acc);background:#fff}
+#pdlg .fb{margin-top:14px}
+#pdlg .hint{font-size:10.5px;color:var(--mut);margin-top:5px;font-family:var(--mono);letter-spacing:.3px}
+.shotrow{display:grid;grid-template-columns:44px 1fr;gap:9px;align-items:start;margin-bottom:9px}
+.shotrow .sid{font-family:var(--mono);font-size:11px;color:var(--acc);padding-top:11px;letter-spacing:.5px}
+.shotrow textarea{min-height:44px}
+.shotrow .wcount{grid-column:2;font-family:var(--mono);font-size:10.5px;color:#8A8378;margin:-5px 0 0 2px;letter-spacing:.3px}
+.shotrow .wcount.ok{color:#3D7A52}.shotrow .wcount.warn{color:#B4472A}
+.ok{color:#3D7A52}.warn{color:#B4472A}
+.finalbar{margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.finalbar .fin{font-size:11px;font-family:var(--mono);color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <div class="brand">
+      <h1>Live Clip Studio</h1>
+      <div class="en">Live Cutting · Short-form Workbench</div>
+      <div class="stats">
+        <div><b id="s1">—</b><span>项目</span></div>
+        <div><b id="s2">—</b><span>定妆照</span></div>
+        <div><b id="s3">—</b><span>成片</span></div>
+        <div><b id="s4">—</b><span>时长</span></div>
+      </div>
+    </div>
+    <nav id="list"></nav>
+    <div class="tools">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="newtask" class="primary">＋ 新建任务</button>
+        <button id="refresh">刷新</button>
+        <button id="unhide" style="display:none">恢复移除</button>
+      </div>
+      <span class="ts" id="ts"></span>
+    </div>
+  </aside>
+  <main id="main">
+    <div class="blank"><div class="big">读取中</div><div class="sm">scanning…</div></div>
+  </main>
+</div>
+<div class="lb" id="lb"><img id="lbimg" alt=""></div>
+<div class="toast" id="toast"></div>
+
+<div class="dlg" id="dlg">
+  <div class="box">
+    <h2>新建直播切片任务</h2>
+    <div class="sub">只建目录骨架和任务卡，不启动生成、不占 GPU。生成等 GPU 空闲再跑。</div>
+
+    <div class="fb">
+      <label>商品名</label>
+      <input id="f-product" placeholder="例如 保温杯 / 香薰蜡烛" maxlength="40" autocomplete="off">
+    </div>
+
+    <div class="fb">
+      <label>主播 · 常驻演员库</label>
+      <select id="f-talent"></select>
+      <div class="tprev"><img id="f-tprev" alt="" style="display:none"><span id="f-tinfo">读取演员库…</span></div>
+    </div>
+
+    <div class="fb frow">
+      <div><label>时长（秒）</label><input id="f-sec" type="number" value="60" min="4" max="600"></div>
+      <div><label>镜数</label><input id="f-shots" type="number" value="8" min="1" max="40"></div>
+      <div><label>每镜</label><input id="f-per" disabled value="7.50 秒"></div>
+    </div>
+
+    <div class="fb frow">
+      <div><label>分辨率</label>
+        <select id="f-res">
+          <option value="480P">480P · 快</option>
+          <option value="720P">720P</option>
+          <option value="1080P">1080P · 慢</option>
+        </select>
+      </div>
+      <div><label>画幅</label>
+        <select id="f-aspect">
+          <option value="9:16">9:16 竖屏</option>
+          <option value="16:9">16:9 横屏</option>
+          <option value="1:1">1:1 方形</option>
+        </select>
+      </div>
+      <div><label>像素</label><input id="f-px" disabled value="480×854"></div>
+    </div>
+
+    <div class="act">
+      <button id="f-cancel">取消</button>
+      <button id="f-ok" class="primary">创建任务</button>
+    </div>
+  </div>
+</div>
+
+<div class="dlg" id="pdlg">
+  <div class="box">
+    <h2>提示词 · 台词</h2>
+    <div class="sub">四段英文描述必须写「定妆照里真实存在的东西」，多写的每一样模型都会逐镜画出来。
+      台词一条一行，行数 = 镜数，语域统一（都用报数据的平铺口吻），声线才稳。</div>
+
+    <div class="fb">
+      <label>商品外观（英文）· 决定商品图和定妆照里的商品长什么样</label>
+      <textarea id="p-product" placeholder="one wireless computer mouse with a gently domed shell …"></textarea>
+      <div class="hint">写法：one + 品类 + 材质/颜色 + 结构细节 + 结尾 no logo, no lettering, no printed text, no pattern</div>
+    </div>
+
+    <div class="fb">
+      <label>主播外貌（英文）</label>
+      <textarea id="p-host" placeholder="a 22-year-old Chinese woman, …"></textarea>
+    </div>
+
+    <div class="fb">
+      <label>服装（英文）</label>
+      <textarea id="p-wardrobe" placeholder="wearing a plain black satin dress …"></textarea>
+    </div>
+
+    <div class="fb">
+      <label>房间（英文）</label>
+      <textarea id="p-room" placeholder="a calm minimal home-study corner in daylight, …"></textarea>
+    </div>
+
+    <div class="fb">
+      <label>逐镜台词（中文，一条一行）· <span id="p-count" class="warn">0 / 0</span></label>
+      <div id="p-shots"></div>
+      <div class="hint">台词字数 = 每镜秒数 × 5（5 秒镜写 25 字）。少了语速会被拖慢，多了会被拉快，成片里不剪任何一帧。</div>
+    </div>
+
+    <div class="act">
+      <button id="p-cancel">取消</button>
+      <button id="p-ok" class="primary">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const state = { data:null, cur:null, video:null };
+
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                  .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmtSize = b => !b ? '—' : (b>1048576 ? (b/1048576).toFixed(1)+' MB' : Math.max(1,Math.round(b/1024))+' KB');
+const fmtDur = s => {
+  if(!s) return '—';
+  const m = Math.floor(s/60), r = Math.round(s%60);
+  return m ? `${m}:${String(r).padStart(2,'0')}` : `${s.toFixed(1)}s`;
+};
+const fmtTime = t => {
+  const d = new Date(t*1000), p = n => String(n).padStart(2,'0');
+  return `${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+const url = p => '/f?p=' + encodeURIComponent(p);
+const posterUrl = v => {
+  if(!v) return '';
+  const t = v.duration ? Math.max(1, Math.min(6, v.duration*0.2)) : 1;
+  return `/api/poster?p=${encodeURIComponent(v.path)}&t=${t.toFixed(1)}`;
+};
+const shotUrl = p => '/api/shot?p=' + encodeURIComponent(p);
+const num = (v, unit='') => (v===null||v===undefined||v==='') ? '—' : v + unit;
+
+// 分辨率 × 画幅 → 像素（与 server.py 的 SIZE_TABLE 保持一致）
+const SIZES = {
+  '480P':  { '9:16':[480,854],  '16:9':[854,480],  '1:1':[480,480]  },
+  '720P':  { '9:16':[720,1280], '16:9':[1280,720], '1:1':[720,720]  },
+  '1080P': { '9:16':[1080,1920],'16:9':[1920,1080],'1:1':[1080,1080]},
+};
+const pxSize = (r, a) => (SIZES[r] && SIZES[r][a]) ? SIZES[r][a] : [480,854];
+
+// 指标健康度：跨度越小越好
+const tier = (v, good, bad) => !v ? '' : (v <= good ? 'g' : v <= bad ? 'w' : 'b');
+
+function renderList(){
+  const list = $('#list'); list.innerHTML='';
+  const ps = state.data.projects;
+  if(!ps.length){
+    list.innerHTML = '<div style="padding:24px 12px;color:#8C8578;font-size:12px;line-height:1.9">没有找到项目。<br>检查 config.json 的 project_root。</div>';
+    return;
+  }
+  ps.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'item' + (state.cur===p.id ? ' on' : '');
+    const cover = p.videos.length
+      ? `<img class="th" src="${posterUrl(p.videos[0])}" loading="lazy" alt="">`
+      : (p.ref ? `<img class="th" src="${url(p.ref)}" loading="lazy" alt="">`
+               : `<div class="th wait">待生成</div>`);
+    const pill = p.pending ? `<span class="pill wait">待生成</span>`
+                           : (p.videos.length ? '' : `<span class="pill">生成中</span>`);
+    el.innerHTML = `${cover}<div class="tx">
+      <div class="t">${esc(p.product)}</div>
+      <div class="m"><span class="code">${esc(p.code)}</span>${pill}
+        <span class="dot"></span>${p.shots.length} 镜
+        <span class="dot"></span>${fmtDur(p.duration)}</div>
+    </div><button class="del" title="从列表移除（不删文件）">×</button>`;
+    el.onclick = () => select(p.id);
+    el.querySelector('.del').onclick = ev => { ev.stopPropagation(); armDelete(ev.currentTarget, p); };
+    list.appendChild(el);
+  });
+}
+
+// 删除按钮：第一次点变「确认」，3 秒内再点才真正移除，防误触
+function armDelete(btn, p){
+  if(btn.dataset.arm === '1'){ hideProject(p, btn); return; }
+  btn.dataset.arm = '1';
+  btn.classList.add('arm');
+  btn.textContent = '确认移除';
+  clearTimeout(btn._t);
+  btn._t = setTimeout(() => {
+    if(!btn.isConnected) return;
+    btn.dataset.arm = ''; btn.classList.remove('arm'); btn.textContent = '×';
+  }, 3000);
+}
+
+async function hideProject(p, btn){
+  clearTimeout(btn._t);
+  try{
+    const r = await fetch('/api/hide?p=' + encodeURIComponent(p.path) + '&on=1');
+    const j = await r.json();
+    if(!j.ok){ toast('移除失败：' + (j.error || '未知错误')); return; }
+  }catch(e){ toast('移除失败：连接断开'); return; }
+  toast('已从列表移除，磁盘文件没动');
+  state.cur = null;
+  load();
+}
+
+async function restoreHidden(){
+  try{
+    const r = await fetch('/api/hide?all=1');
+    const j = await r.json();
+    if(!j.ok){ toast('恢复失败'); return; }
+    toast('已恢复全部项目');
+    state.cur = null;
+    load();
+  }catch(e){ toast('恢复失败：连接断开'); }
+}
+
+function select(id){
+  const p = state.data.projects.find(x => x.id===id);
+  if(!p) return;
+  state.cur = id;
+  state.video = p.videos[0] || null;
+  try{ localStorage.setItem('wb.cur', id); }catch(e){}
+  renderList();
+  renderMain(p);
+}
+
+function metricsHtml(p){
+  const m = p.metrics || {};
+  const v = state.video;
+  const cells = [
+    ['成片时长', v && v.duration ? v.duration.toFixed(2)+'s' : '—', ''],
+    ['分辨率', v && v.width ? `${v.width}×${v.height}` : '—', ''],
+    ['帧率', v && v.fps ? v.fps+' fps' : '—', ''],
+    ['响度', m.lufs!=null ? m.lufs.toFixed(2) : '—', ''],
+    ['真峰值', m.tp!=null ? m.tp.toFixed(2)+' dB' : '—', ''],
+    ['体积', v ? fmtSize(v.size) : '—', ''],
+    ['F0 跨度', m.f0_spread!=null ? m.f0_spread.toFixed(1)+'%' : '—', tier(m.f0_spread,25,40)],
+    ['质心跨度', m.cen_spread!=null ? m.cen_spread.toFixed(1)+'%' : '—', tier(m.cen_spread,25,45)],
+    ['镜头数', p.shots.length ? p.shots.length+' 镜' : '—', ''],
+  ];
+  return `<div class="metrics">${cells.map(([k,val,cls]) =>
+    `<div class="mt"><span>${k}</span><b class="${cls||''}">${esc(val)}</b></div>`).join('')}</div>`;
+}
+
+function renderMain(p){
+  const m = $('#main');
+  const v = state.video;
+
+  if(p.pending){ renderPending(p); return; }
+
+  const refBlock = `
+    <div class="asset">
+      ${p.ref ? `<img src="${url(p.ref)}" data-zoom="${esc(p.ref)}" alt="定妆照">`
+              : `<div class="none">无定妆照</div>`}
+      <div class="cap">定妆照 · 全片首帧</div>
+    </div>`;
+  const prodBlock = `
+    <div class="asset">
+      ${p.product_img ? `<img src="${url(p.product_img)}" data-zoom="${esc(p.product_img)}" alt="商品图">`
+                      : `<div class="none">无商品图</div>`}
+      <div class="cap">商品图 · Z-Image</div>
+    </div>`;
+
+  const shots = p.shots.length ? `
+    <div class="sect">
+      <h3>八镜抽帧 <em>${esc(p.raw_dir ? p.raw_dir.split(/[\\/]/).pop() : '')}</em></h3>
+      <div class="strip">${p.shots.map(s => `
+        <div class="shot" data-zoom="${esc(s.path)}">
+          <img src="${shotUrl(s.path)}" loading="lazy" alt="${esc(s.id)}">
+          <i>${esc(s.id)}</i>
+        </div>`).join('')}</div>
+    </div>` : '';
+
+  const icons = p.image_consistency || {};
+  const iconKv = Object.keys(icons).length
+    ? `<div class="kv">${Object.entries(icons).map(([k,val]) =>
+        `<i>${esc(k)}：${esc(typeof val === 'object' ? JSON.stringify(val) : val)}</i>`).join('')}</div>`
+    : '';
+
+  const issues = (p.metrics && p.metrics.issues && p.metrics.issues.length)
+    ? `<ul>${p.metrics.issues.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '';
+
+  // 还没出成片的任务，继续显示执行区
+  const runBlock = (p.task && !p.videos.length) ? runPanel(p) : '';
+
+  const verdict = (p.metrics && p.metrics.verdict)
+    ? `<div class="sect"><h3>审核结论</h3>
+         <div class="notes">${esc(p.metrics.verdict)}${iconKv}
+         ${issues ? `<div style="margin-top:9px;font-size:11px;color:#8C8578;letter-spacing:1px">已知问题</div>${issues}` : ''}
+         </div></div>`
+    : (iconKv ? `<div class="sect"><h3>画面一致性</h3><div class="notes">${iconKv}</div></div>` : '');
+
+  const files = p.files.length ? `
+    <div class="sect">
+      <h3>文件 <em>${p.files.length}</em></h3>
+      ${p.files.map(f => `
+        <div class="row">
+          <div class="n" data-open="${esc(f.path)}">${esc(f.rel)}</div>
+          <button class="mini" data-reveal="${esc(f.path)}">定位</button>
+        </div>`).join('')}
+    </div>` : '';
+
+  m.innerHTML = `
+    <div class="head">
+      <div>
+        <div class="kind">
+          <span>${esc(p.code)}</span><span>·</span>
+          <span>${esc(p.mode || '直播切片')}</span>
+        </div>
+        <h2>${esc(p.product)}</h2>
+        <div class="path">${esc(p.path)}</div>
+      </div>
+      <div style="flex-shrink:0"><button data-reveal="${esc(p.path)}">打开目录</button></div>
+    </div>
+
+    <div class="cols">
+      <div>
+        <div class="stage">${v
+          ? `<video id="player" controls preload="metadata"
+               poster="${posterUrl(v)}" src="${url(v.path)}"></video>`
+          : `<div class="none">还没有成片</div>`}</div>
+        <div class="chips">${p.videos.map(x => `
+          <div class="chip ${v && x.path===v.path ? 'on':''}" data-p="${esc(x.path)}">
+            ${esc(x.name.replace(/\.mp4$/i,''))} <em>${fmtDur(x.duration)}</em>
+          </div>`).join('')}</div>
+      </div>
+      <div>
+        ${metricsHtml(p)}
+        <div class="grid2" style="margin-top:14px">${refBlock}${prodBlock}</div>
+      </div>
+    </div>
+
+    ${shots}
+    ${verdict}
+    ${runBlock}
+    ${files}
+  `;
+
+  m.querySelectorAll('.chip').forEach(c => {
+    c.onclick = () => { state.video = p.videos.find(x => x.path===c.dataset.p); renderMain(p); };
+  });
+  m.querySelectorAll('[data-reveal]').forEach(el => {
+    el.onclick = () => reveal(el.dataset.reveal);
+  });
+  m.querySelectorAll('[data-open]').forEach(el => {
+    el.onclick = () => openFile(el.dataset.open);
+  });
+  m.querySelectorAll('[data-zoom]').forEach(el => {
+    el.onclick = () => {
+      const src = el.tagName === 'IMG' ? el.src : '/api/poster?p=' + encodeURIComponent(el.dataset.zoom) + '&t=3.5';
+      $('#lbimg').src = src; $('#lb').classList.add('on');
+    };
+  });
+  if(runBlock) bindRun(p);
+}
+
+function renderPending(p){
+  const m = $('#main');
+  const t = p.task || {};
+  const per = (t.seconds && t.shots) ? (t.seconds / t.shots).toFixed(2) + 's' : '—';
+  const cells = [
+    ['主播', t.talent || '待定'], ['时长', (t.seconds || 0) + ' 秒'],
+    ['镜数', (t.shots || 0) + ' 镜'], ['每镜', per],
+    ['分辨率', (t.resolution || '480P') + ' · ' + (t.aspect || '9:16')],
+    ['像素', (t.width || 480) + '×' + (t.height || 854)],
+    ['模式', '首尾同图'], ['状态', t.status || '待生成'],
+    ['编号', t.code || p.code], ['创建', t.created_at || '—'],
+  ];
+  const files = p.files.length ? `
+    <div class="sect">
+      <h3>文件 <em>${p.files.length}</em></h3>
+      ${p.files.map(f => `<div class="row">
+        <div class="n" data-open="${esc(f.path)}">${esc(f.rel)}</div>
+        <button class="mini" data-reveal="${esc(f.path)}">定位</button></div>`).join('')}
+    </div>` : '';
+
+  m.innerHTML = `
+    <div class="head">
+      <div>
+        <div class="kind"><span>${esc(p.code)}</span><span>·</span><span>待生成</span></div>
+        <h2>${esc(t.product || p.product)}</h2>
+        <div class="path">${esc(p.path)}</div>
+      </div>
+      <div style="flex-shrink:0"><button data-reveal="${esc(p.path)}">打开目录</button></div>
+    </div>
+
+    <div class="sect">
+      <h3>任务信息</h3>
+      <div class="metrics">${cells.map(([k, val]) =>
+        `<div class="mt"><span>${k}</span><b>${esc(val)}</b></div>`).join('')}</div>
+    </div>
+
+    ${runPanel(p)}
+
+    <div class="sect">
+      <h3>执行顺序</h3>
+      <div class="notes">
+        <b>0</b> 编辑提示词：四段英文描述 + 逐镜台词 →
+        <b>①</b> 商品图 + 定妆照（Z-Image，多个 seed，人工挑 1 张定稿）→
+        <b>②</b> 逐镜 H3 首尾同图（每镜 first = last = 同一张定妆照）→
+        <b>③</b> 合成：整段直拼（不剪帧）+ 烧中文字幕 + 响度归一 -16 LUFS。<br>
+        ①②会占 GPU，一镜 480P 约 3~6 分钟；③ 只吃 CPU。成片落在 11_成片。
+      </div>
+    </div>
+    ${files}
+  `;
+  m.querySelectorAll('[data-reveal]').forEach(el => { el.onclick = () => reveal(el.dataset.reveal); });
+  m.querySelectorAll('[data-open]').forEach(el => { el.onclick = () => openFile(el.dataset.open); });
+  bindRun(p);
+}
+
+// ---------------------------------------------------------------- 执行
+function runPanel(p){
+  return `
+    <div class="sect">
+      <h3>执行</h3>
+      <div class="runbar">
+        <button class="primary" data-run="assets" id="b-assets">① 商品图 + 定妆照</button>
+        <button id="b-regen">↻ 重新出图</button>
+        <button data-run="shots" id="b-shots">② 生成镜头</button>
+        <button data-run="final" id="b-final">③ 合成成片</button>
+        <button class="auto" id="b-auto">⚡ 一键生成</button>
+        <button id="b-prompts">编辑提示词</button>
+        <span class="runmsg" id="runmsg">检查中…</span>
+      </div>
+      <div class="prog"><i id="progbar"></i></div>
+      <div class="cands" id="cands"></div>
+      <div class="finalbar" id="finalbar" style="display:none"></div>
+      <div class="runlog" id="runlog" style="display:none"></div>
+    </div>`;
+}
+
+let pollTimer = null;
+
+function bindRun(p){
+  document.querySelectorAll('[data-run]').forEach(b => {
+    b.onclick = () => runStage(p, b.dataset.run, b);
+  });
+  $('#b-prompts').onclick = () => openPrompts(p);
+  const br = $('#b-regen');
+  if(br) br.onclick = () => regenAssets(p);
+  const ba = $('#b-auto');
+  if(ba) ba.onclick = () => autoRun(p);
+  pollStatus(p);
+}
+
+function applyRunState(p, j){
+  const set = (id, ok, why) => {
+    const b = document.getElementById(id);
+    if(!b) return;
+    const off = !ok || j.running;
+    b.classList.toggle('off', off);
+    b.dataset.why = off ? (j.running ? '这个任务正在跑，等它跑完再点' : why) : '';
+    b.title = b.dataset.why || '';
+  };
+  set('b-assets', j.can_assets !== false, '四段描述没填齐 —— 多半是建任务时没选主播，点「编辑提示词」补上');
+  set('b-regen', true, '');
+  set('b-shots', j.can_shots, j.has_ref ? '台词条数不够，去「编辑提示词」补齐' : '先跑①并在候选里点一张「选为定稿」');
+  set('b-final', j.can_final, `还缺 ${j.shots_need - j.shots_done} 镜素材，先跑②`);
+  const b2 = document.getElementById('b-shots');
+  if(b2) b2.textContent = `② 生成 ${j.shots_need} 镜`;
+
+  const ba = document.getElementById('b-auto');
+  if(ba){
+    const on = !!(AUTO && AUTO.path === p.path);
+    const off = !j.can_shots || (j.running && !on);
+    ba.classList.toggle('off', off);
+    ba.dataset.why = off ? (j.running ? '这个任务正在跑，等它跑完再点'
+      : (j.has_ref ? '台词条数不够，去「编辑提示词」补齐' : '先在候选里点一张「选为定稿」')) : '';
+    ba.textContent = on
+      ? (AUTO.phase === 'shots' ? '⚡ 正在生成镜头…' : '⚡ 正在合成成片…')
+      : (j.can_final && !j.final ? '⚡ 一键合成' : '⚡ 一键生成');
+    ba.classList.toggle('on', on);
+    ba.title = off ? ba.dataset.why : '定妆照已定稿，自动跑 ② 生成镜头 + ③ 合成成片';
+  }
+  const bar = $('#finalbar');
+  if(bar){
+    if(j.final){
+      bar.style.display = '';
+      bar.innerHTML = `<button data-dl="${esc(j.final.path)}">下载成片</button>
+        <button data-open="${esc(j.final.path)}">播放成片</button>
+        <button data-reveal="${esc(p.path + '\\11_成片')}">打开成片目录</button>
+        <span class="fin">${esc(j.final.name)}</span>`;
+      bar.querySelectorAll('[data-dl]').forEach(el => { el.onclick = () => downloadFile(el.dataset.dl); });
+      bar.querySelectorAll('[data-open]').forEach(el => { el.onclick = () => openFile(el.dataset.open); });
+      bar.querySelectorAll('[data-reveal]').forEach(el => { el.onclick = () => reveal(el.dataset.reveal); });
+    } else bar.style.display = 'none';
+  }
+}
+
+// 一键生成：定妆照定稿后，自动串起 ② 生成镜头 → ③ 合成成片
+let AUTO = null;   // { path, phase: 'shots' | 'final' }
+
+async function startStage(p, stage, regen){
+  try{
+    let url = '/api/task/run?p=' + encodeURIComponent(p.path) + '&stage=' + stage;
+    if(regen) url += '&regen=1';
+    const r = await fetch(url);
+    const j = await r.json();
+    if(!j.ok){ toast('启动失败：' + (j.error || '未知错误')); return false; }
+    return true;
+  }catch(e){ toast('启动失败：连接断开'); return false; }
+}
+
+// 重新出图：第一次点变「确认重出？」，3 秒内再点才真正跑，防误触
+let REGEN_ARM = null;
+async function regenAssets(p){
+  const b = $('#b-regen');
+  if(!b) return;
+  if(b.classList.contains('off')){ toast(b.dataset.why || '现在还不能点'); return; }
+  if(REGEN_ARM && REGEN_ARM.path === p.path){
+    clearTimeout(REGEN_ARM.timer);
+    REGEN_ARM = null;
+    b.textContent = '↻ 启动中…';
+    const ok = await startStage(p, 'assets', true);
+    if(ok){
+      toast('已开始重新出图，旧图备份在 _历史 目录里');
+      const ref = document.getElementById('b-shots');
+      if(ref) ref.textContent = '② 生成镜头';
+    }
+    pollStatus(p);
+    return;
+  }
+  const had = (p.shots_done || 0) > 0;
+  b.textContent = '↻ 确认重出？';
+  toast(had
+    ? '再点一次就开始：商品图和定妆照会重出，已定稿作废，已生成的镜头也会对不上，得重跑 ②'
+    : '再点一次就开始：商品图和定妆照会重出，旧的备份到 _历史 目录，不会删除');
+  REGEN_ARM = { path: p.path, timer: setTimeout(() => {
+    REGEN_ARM = null;
+    const x = $('#b-regen');
+    if(x) x.textContent = '↻ 重新出图';
+  }, 3000) };
+}
+
+async function runStage(p, stage, btn){
+  if(btn.classList.contains('off')){ toast(btn.dataset.why || '现在还不能点'); return; }
+  btn.classList.add('off');
+  btn.textContent = '启动中…';
+  const ok = await startStage(p, stage);
+  if(!ok) pollStatus(p);
+  else { toast('已启动，进度在下方'); pollStatus(p); }
+}
+
+async function autoRun(p){
+  const ba = document.getElementById('b-auto');
+  if(ba && ba.classList.contains('off')){ toast(ba.dataset.why || '现在还不能点'); return; }
+  if(ba){ ba.classList.add('off'); ba.textContent = '⚡ 启动中…'; }
+  const ok = await startStage(p, 'shots');
+  if(!ok){ AUTO = null; pollStatus(p); return; }
+  AUTO = { path: p.path, phase: 'shots' };
+  toast('一键生成已开始，② 镜头 + ③ 成片自己跑，不用守着');
+  pollStatus(p);
+}
+
+async function advanceAuto(p, j){
+  if(!AUTO || AUTO.path !== p.path) return;
+  if(AUTO.phase === 'shots'){
+    if(j.shots_done >= j.shots_need){
+      AUTO.phase = 'final';
+      if(await startStage(p, 'final')){
+        toast('镜头齐了，自动开始合成');
+        pollTimer = setTimeout(() => pollStatus(p), 1500);
+      } else { AUTO = null; pollStatus(p); }
+    } else {
+      AUTO = null; toast('② 中断了，看下方日志');
+      pollStatus(p);
+    }
+  } else if(AUTO.phase === 'final'){
+    if(j.final){ AUTO = null; toast('成片好了，点下方播放'); }
+    else { AUTO = null; toast('③ 中断了，看下方日志'); }
+    pollStatus(p);
+  }
+}
+
+async function pollStatus(p){
+  clearTimeout(pollTimer);
+  try{
+    const r = await fetch('/api/task/status?p=' + encodeURIComponent(p.path));
+    const j = await r.json();
+    if(!j.ok) return;
+    const pr = j.progress || {};
+    const bar = $('#progbar'), msg = $('#runmsg'), lg = $('#runlog');
+    if(bar) bar.style.width = (pr.pct || (j.running ? 3 : 0)) + '%';
+    if(msg){
+      let t = pr.msg || (j.running ? '运行中…' : '就绪');
+      if(!j.running && j.progress && j.progress.stage){
+        t = `[${j.progress.stage}] ${t}`;
+      }
+      msg.textContent = t;
+      msg.className = 'runmsg ' + (pr.state === 'error' ? 'warn' : (pr.state === 'done' ? 'ok' : ''));
+    }
+    if(bar) bar.style.background = pr.state === 'error' ? '#B4472A' : '';
+    if(lg){
+      lg.style.display = j.log ? '' : 'none';
+      if(j.log){ lg.textContent = j.log; lg.scrollTop = lg.scrollHeight; }
+    }
+    applyRunState(p, j);
+    renderCands(p, j);
+    if(!j.running && pr.stage === 'final' && pr.state === 'done' && !p._reloaded){
+      p._reloaded = true; setTimeout(() => load(), 400);   // 成片出来了，刷新左栏和列表
+    }
+    if(j.running) pollTimer = setTimeout(() => pollStatus(p), 2500);
+    else if(AUTO && AUTO.path === p.path) await advanceAuto(p, j);
+  }catch(e){ /* 窗口关闭时断连，忽略 */ }
+}
+
+function renderCands(p, j){
+  const box = $('#cands');
+  if(!box) return;
+  const list = j.candidates || [];
+  if(!list.length){ box.innerHTML = ''; return; }
+  box.innerHTML = list.map(f => `
+    <div class="cand">
+      <img src="${url(f)}" data-zoom="${esc(f)}" alt="">
+      <button data-pick="${esc(f)}">${j.has_ref ? '已定稿 · 点此重选' : '选为定稿'}</button>
+    </div>`).join('');
+  box.querySelectorAll('[data-pick]').forEach(b => {
+    b.onclick = () => pickRef(p, b.dataset.pick, b);
+  });
+  box.querySelectorAll('[data-zoom]').forEach(el => {
+    el.onclick = () => { $('#lbimg').src = el.src; $('#lb').classList.add('on'); };
+  });
+}
+
+async function pickRef(p, f, btn){
+  btn.disabled = true;
+  try{
+    const r = await fetch('/api/ref/pick?p=' + encodeURIComponent(p.path) + '&f=' + encodeURIComponent(f));
+    const j = await r.json();
+    if(!j.ok){ toast('定稿失败：' + (j.error || '未知错误')); btn.disabled = false; return; }
+    toast('定妆照已定稿');
+    load();
+  }catch(e){ toast('定稿失败：连接断开'); btn.disabled = false; }
+}
+
+// ---------------------------------------------------------------- 新建任务
+let TALENTS = [];
+
+async function openCreate(){
+  $('#dlg').classList.add('on');
+  $('#f-product').value = '';
+  $('#f-sec').value = 60;
+  $('#f-shots').value = 8;
+  $('#f-res').value = '480P';
+  $('#f-aspect').value = '9:16';
+  updatePer();
+  setTimeout(() => $('#f-product').focus(), 60);
+
+  if(!TALENTS.length){
+    $('#f-tinfo').textContent = '读取演员库…';
+    try{
+      const r = await fetch('/api/talents');
+      const j = await r.json();
+      TALENTS = j.talents || [];
+    }catch(e){ TALENTS = []; }
+  }
+  const sel = $('#f-talent');
+  sel.innerHTML = '<option value="">（暂不指定，后面再选）</option>'
+    + TALENTS.map(t => `<option value="${esc(t.name)}">${esc(t.name)}</option>`).join('');
+  sel.value = '';
+  showTalent();
+}
+
+function showTalent(){
+  const sel = $('#f-talent');
+  const t = TALENTS.find(x => x.name === sel.value);
+  const img = $('#f-tprev');
+  if(t){
+    img.src = url(t.path); img.style.display = '';
+    $('#f-tinfo').textContent = t.name + ' · 定装照';
+  } else {
+    img.style.display = 'none'; img.removeAttribute('src');
+    $('#f-tinfo').textContent = TALENTS.length
+      ? '未指定主播 · 可以稍后在项目里补'
+      : '演员库没扫到可用主播（文件名需形如 CN01_林悦_…png）';
+  }
+}
+
+function updatePer(){
+  const s = +$('#f-sec').value || 0, n = +$('#f-shots').value || 0;
+  $('#f-per').value = (s && n) ? (s / n).toFixed(2) + ' 秒' : '—';
+  const [w, h] = pxSize($('#f-res').value, $('#f-aspect').value);
+  $('#f-px').value = `${w}×${h}`;
+}
+
+// 铁律①：每秒 5 个字 —— 每镜目标字数 = 每镜秒数 × 5（不留余量、不四舍五入到别处）
+const CPS = 5;
+function targetChars(task){
+  const s = +(task && task.seconds) || 30, n = Math.max(1, +(task && task.shots) || 6);
+  return Math.max(6, Math.round(s / n * CPS));
+}
+
+const BENEFIT_LINES = [
+  '第一，看用料，边角和接口一眼就能看出好坏，用料差的根本藏不住。',
+  '第二，看手感，上手那一下的重量和贴合度，就告诉你值不值这个钱。',
+  '第三，看耐用，天天用三个月还跟新的一样，不会用两周就开始松垮。',
+  '第四，看细节，卡扣、螺丝、接缝这些小地方，才是真成本所在。',
+  '第五，看尺寸，放桌上不占地儿，收起来也方便，出门还能直接带走。',
+  '第六，看价格，同价位里很难再找到第二家做到这个做工的。',
+];
+
+function autoProductEn(name){
+  return name + '，单个完整商品主体，正面平视角度，纯白无缝背景，柔和均匀顶光，边缘干净，无品牌标志，无文字，产品摄影质感';
+}
+
+// 补齐到「秒数×5」：同一镜内不重复用同一句尾巴，缺口 ≤2 字就停（±2 字在容差内）
+const FILL_CLAUSES = ['这点很多人不知道', '同价位真的很难找', '细节见真章', '真的不踩坑',
+                      '日常都好用', '送人也体面', '这点别忽略', '用过就明白',
+                      '真省心', '也好用', '很耐用', '真划算'];
+
+function fitChars(seed, want, startIdx){
+  let parts = String(seed || '').replace(/[。！？]$/, '').split('，').filter(Boolean);
+  const len = () => parts.join('，').replace(/[，。！？；、]/g, '').length;
+  while (len() > want && parts.length > 1) parts.pop();
+  let i = (startIdx || 0) % FILL_CLAUSES.length, added = 0;
+  while (added < 8 && want - len() > 2) {
+    const order = FILL_CLAUSES.slice(i).concat(FILL_CLAUSES.slice(0, i));
+    const pick = order.find(c => c.length <= want - len() && !parts.includes(c));
+    if (!pick) break;
+    parts.push(pick);
+    i = (FILL_CLAUSES.indexOf(pick) + 1) % FILL_CLAUSES.length;
+    added++;
+  }
+  return parts.join('，') + '。';
+}
+
+function autoShots(product, n, perShot){
+  const want = Math.max(6, Math.round((perShot || 5) * CPS));
+  const k = Math.max(1, Math.min(BENEFIT_LINES.length, n - 2));
+  const out = [product + '别光看价格，我拆开讲，一共就' + k + '个点'];
+  for (let i = 0; i < k; i++) out.push(BENEFIT_LINES[i % BENEFIT_LINES.length]);
+  out.push('日常用、送人都合适，今天这个价真的可以拿下，想买的别犹豫太久');
+  while (out.length < n) out.splice(out.length - 1, 0, '再补一句，用料扎实，不是便宜货');
+  return out.slice(0, n).map((v, i) => ({ voice: fitChars(v, want, i), action_en: '' }));
+}
+
+async function autofillPrompts(path, product, n, perShot){
+  try{
+    const r = await fetch('/api/prompts/save?p=' + encodeURIComponent(path), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_en: autoProductEn(product), shots: autoShots(product, n, perShot) }),
+    });
+    return !!(await r.json()).ok;
+  }catch(e){ return false; }
+}
+
+async function submitCreate(){
+  const product = $('#f-product').value.trim();
+  if(!product){ toast('先填商品名'); $('#f-product').focus(); return; }
+  if(!$('#f-talent').value){
+    toast('先选一个主播 —— 不选就出不了定妆照，① 也点不动');
+    $('#f-talent').focus(); return;
+  }
+  const btn = $('#f-ok');
+  btn.disabled = true; btn.textContent = '创建中…';
+  try{
+    const qs = new URLSearchParams({
+      product,
+      talent: $('#f-talent').value,
+      seconds: $('#f-sec').value || 60,
+      shots: $('#f-shots').value || 8,
+      resolution: $('#f-res').value,
+      aspect: $('#f-aspect').value,
+    });
+    const r = await fetch('/api/task/create?' + qs.toString());
+    const j = await r.json();
+    if(!j.ok){ toast('创建失败：' + (j.error || '未知错误')); return; }
+    const n = +($('#f-shots').value || 8);
+    const sec = +($('#f-sec').value || 60);
+    const filled = await autofillPrompts(j.path, product, n, sec / n);
+    $('#dlg').classList.remove('on');
+    toast(filled ? ('已建好 ' + j.name + ' · 商品描述和台词已自动写好')
+                 : ('已建好 ' + j.name + ' · 记得先填提示词'));
+    await load();
+  }catch(e){
+    toast('创建失败：连接断开');
+  }finally{
+    btn.disabled = false; btn.textContent = '创建任务';
+  }
+}
+
+async function reveal(path){
+  const r = await fetch('/api/reveal?p=' + encodeURIComponent(path));
+  const j = await r.json();
+  if(!j.ok) toast('无法打开：' + (j.error || '未知错误'));
+}
+
+// ---------------------------------------------------------------- 提示词弹层
+let P_CUR = null;
+
+async function openPrompts(p){
+  P_CUR = p;
+  try{
+    const r = await fetch('/api/prompts/get?p=' + encodeURIComponent(p.path));
+    const j = await r.json();
+    if(!j.ok){ toast('读取失败：' + (j.error || '')); return; }
+    const d = j.prompts || {}, task = j.task || {};
+    $('#p-product').value  = d.product_en || '';
+    $('#p-host').value     = d.host_en || '';
+    $('#p-wardrobe').value = d.wardrobe_en || '';
+    $('#p-room').value     = d.room_en || '';
+    const n = Math.max(1, +(task.shots || 8));
+    P_TARGET = targetChars(task);
+    const shots = d.shots || [];
+    $('#p-shots').innerHTML = Array.from({length:n}, (_, i) => {
+      const s = shots[i] || {};
+      return `<div class="shotrow"><div class="sid">S${String(i+1).padStart(2,'0')}</div>
+        <textarea data-vi="${i}" placeholder="第 ${i+1} 镜台词（中文）· 目标 ${P_TARGET} 字">${esc(s.voice || '')}</textarea>
+        <div class="wcount" data-wc="${i}"></div></div>`;
+    }).join('');
+    $('#p-count').textContent = `0 / ${n}`;
+    $('#p-shots').oninput = updateVoiceCount;
+    updateVoiceCount();
+    $('#pdlg').classList.add('on');
+    setTimeout(() => $('#p-product').focus(), 60);
+  }catch(e){ toast('读取失败：连接断开'); }
+}
+
+let P_TARGET = 25;
+
+function updateVoiceCount(){
+  const tAs = [...$('#p-shots').querySelectorAll('textarea')];
+  const filled = tAs.filter(t => t.value.trim()).length;
+  tAs.forEach((t, i) => {
+    const n = t.value.replace(/[\s，。！？；、,.!?;:"'“”‘’]/g, '').length;
+    const el = $(`.wcount[data-wc="${i}"]`);
+    if(!el) return;
+    if(!n){ el.textContent = `目标 ${P_TARGET} 字（每镜秒数 × 5）`; el.className = 'wcount'; return; }
+    const d = n - P_TARGET;
+    el.textContent = `${n} 字 / 目标 ${P_TARGET}（秒数×5）` + (d < -2 ? ' · 偏少，语速会拖慢' : (d > 2 ? ' · 偏多，语速会被拉快' : ' · 正好'));
+    el.className = 'wcount ' + (Math.abs(d) <= 3 ? 'ok' : 'warn');
+  });
+  const el = $('#p-count');
+  el.textContent = `${filled} / ${tAs.length}`;
+  el.className = filled >= tAs.length ? 'ok' : 'warn';
+}
+
+async function submitPrompts(){
+  if(!P_CUR) return;
+  const btn = $('#p-ok');
+  btn.disabled = true; btn.textContent = '保存中…';
+  try{
+    const shots = [...$('#p-shots').querySelectorAll('textarea')].map((t, i) => ({
+      voice: t.value.trim(),
+      action_en: '',
+    }));
+    const r = await fetch('/api/prompts/save?p=' + encodeURIComponent(P_CUR.path), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        product_en: $('#p-product').value,
+        host_en: $('#p-host').value,
+        wardrobe_en: $('#p-wardrobe').value,
+        room_en: $('#p-room').value,
+        shots,
+      }),
+    });
+    const j = await r.json();
+    if(!j.ok){ toast('保存失败：' + (j.error || '')); return; }
+    $('#pdlg').classList.remove('on');
+    const st = j.state || {};
+    toast(st.desc_ok && st.voices_ok ? '已保存，可以跑①了' : '已保存，四段描述和台词要填齐');
+    pollStatus(P_CUR);
+  }catch(e){ toast('保存失败：连接断开'); }
+  finally{ btn.disabled = false; btn.textContent = '保存'; }
+}
+
+$('#p-cancel').onclick = () => $('#pdlg').classList.remove('on');
+$('#p-ok').onclick = submitPrompts;
+$('#pdlg').onclick = e => { if(e.target.id === 'pdlg') $('#pdlg').classList.remove('on'); };
+
+let toastTimer = null;
+function toast(msg){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('on'), 2200);
+}
+
+async function openFile(path){
+  const r = await fetch('/api/open?p=' + encodeURIComponent(path));
+  const j = await r.json();
+  if(!j.ok) toast('无法打开：' + (j.error || '未知错误'));
+}
+
+// 下载由服务端把成片复制到系统「下载」文件夹：WebView2 内核不接管浏览器下载事件
+async function downloadFile(path){
+  try{
+    const r = await fetch('/api/download?p=' + encodeURIComponent(path));
+    const j = await r.json();
+    if(!j.ok){ toast('下载失败：' + (j.error || '未知错误')); return; }
+    toast('已下载到 ' + j.path);
+    const bar = $('#finalbar');
+    if(bar){
+      let s = bar.querySelector('.saved');
+      if(!s){ s = document.createElement('div'); s.className = 'fin saved'; s.style.width = '100%'; bar.appendChild(s); }
+      s.textContent = '已保存 → ' + j.path;
+    }
+  }catch(e){ toast('下载失败：连接断开'); }
+}
+
+// App 内快捷键：Ctrl+R 刷新（原生窗口没有浏览器刷新按钮）
+addEventListener('keydown', e => {
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r'){ e.preventDefault(); state.cur = null; load(); }
+  if(e.key === 'Escape'){ $('#lb').classList.remove('on'); $('#lbimg').src=''; $('#dlg').classList.remove('on'); $('#pdlg').classList.remove('on'); }
+  if(e.key === 'Enter' && (e.ctrlKey || e.metaKey) && $('#pdlg').classList.contains('on')){ e.preventDefault(); submitPrompts(); }
+  if(e.key === 'Enter' && $('#dlg').classList.contains('on')){ e.preventDefault(); submitCreate(); }
+});
+
+$('#lb').onclick = () => { $('#lb').classList.remove('on'); $('#lbimg').src=''; };
+
+// 新建任务
+$('#newtask').onclick = openCreate;
+$('#f-cancel').onclick = () => $('#dlg').classList.remove('on');
+$('#f-ok').onclick = submitCreate;
+$('#f-talent').onchange = showTalent;
+$('#f-sec').oninput = updatePer;
+$('#f-shots').oninput = updatePer;
+$('#f-res').onchange = updatePer;
+$('#f-aspect').onchange = updatePer;
+$('#dlg').onclick = e => { if(e.target === $('#dlg')) $('#dlg').classList.remove('on'); };
+
+async function load(){
+  $('#main').innerHTML = '<div class="blank"><div class="big">读取中</div><div class="sm">scanning…</div></div>';
+  try{
+    const r = await fetch('/api/state');
+    state.data = await r.json();
+  }catch(e){
+    $('#main').innerHTML = '<div class="blank"><div class="big">连接失败</div><div class="sm">检查 server.py 是否在运行</div></div>';
+    return;
+  }
+  const s = state.data.stats;
+  $('#s1').textContent = s.projects;
+  $('#s2').textContent = s.with_ref;
+  $('#s3').textContent = s.videos;
+  $('#s4').textContent = fmtDur(s.duration);
+  $('#ts').textContent = fmtTime(state.data.generated_at);
+  const hid = state.data.hidden_count || 0;
+  const ub = $('#unhide');
+  ub.style.display = hid ? '' : 'none';
+  ub.textContent = `恢复移除 ${hid}`;
+  ub.onclick = restoreHidden;
+  renderList();
+  if(state.data.projects.length){
+    let last = null;
+    try{ last = localStorage.getItem('wb.cur'); }catch(e){}
+    const keep = state.data.projects.some(p=>p.id===state.cur) ? state.cur
+               : (state.data.projects.some(p=>p.id===last) ? last : state.data.projects[0].id);
+    select(keep);
+  } else {
+    $('#main').innerHTML = '<div class="blank"><div class="big">没有项目</div><div class="sm">检查 config.json 的 project_root</div></div>';
+  }
+}
+
+$('#refresh').onclick = () => load();
+load();
+</script>
+</body>
+</html>
