@@ -178,12 +178,17 @@ want_chars = round(nominal_seconds * CPS)      # 5 秒镜 → 25 字
 
 ## 支持作者
 
-如果这套流程帮你省了时间，可以：
+工作台左上角有一个「♥ 支持作者」入口，默认隐藏。
 
-- 给仓库点个 Star
-- [GitHub Sponsors](https://github.com/sponsors) / 爱发电（把链接换成你自己的）
+在 `config.json` 里填 `support_url` 就会显示：
 
-仓库本身不内置支付或授权校验 —— 代码全部开源，本地跑的东西没法做真实付费墙，也不建议做。
+```json
+{ "support_url": "https://afdian.com/a/yourname" }
+```
+
+支持 GitHub Sponsors、爱发电、赞赏码页面等任意链接。
+
+**仓库本身不内置支付和授权校验** —— 代码全部开源、本地运行，做不了真实付费墙，也不建议做。想收费请用第三方发卡平台卖授权码，不要在这份代码里写校验。
 
 ## License
 

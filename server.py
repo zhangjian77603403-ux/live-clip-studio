@@ -707,6 +707,7 @@ def scan() -> dict:
                               -int(bool(x["ref"])), -x["mtime"]))
     return {
         "app": CFG.get("app_name") or "Live Clip Studio",
+        "support_url": CFG.get("support_url") or "",
         "generated_at": time.time(),
         "root": str(ROOT),
         "projects": items,
