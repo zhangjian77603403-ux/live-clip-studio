@@ -302,7 +302,7 @@ _TALENT_PAT = re.compile(r"^([A-Za-z]{2}\d{2})_([^_]+).*\.(png|jpg|jpeg|webp)$",
 
 
 def talents() -> list[dict]:
-    """从常驻演员库扒可用主播。文件名形如 CN01_林悦_ZImage_v1.png。
+    """从常驻演员库扒可用主播。文件名形如 CN01_示例名_ZImage_v1.png。
 
     同一个编号可能散落在多个批次里（身份照 / 三视图 / ZImage 定妆），
     优先取 ZImage 定装照，其次取路径里带「定装/定妆」的，最后才是其它。
@@ -326,7 +326,7 @@ def talents() -> list[dict]:
             continue
         best[tid] = (score, {"id": tid, "name": f"{tid} {m.group(2)}", "path": str(f)})
 
-    # 另一批素材按人建目录：…/CN071_谭映瑶/01_全身正面.png
+    # 另一批素材按人建目录：…/CN071_示例名/01_全身正面.png
     dpat = re.compile(r"^((?:CN|INT)\d{2,3})_(.+)$", re.I)
     for d in sorted(TALENT_ROOT.rglob("*")):
         if not d.is_dir():
