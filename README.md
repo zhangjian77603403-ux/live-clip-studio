@@ -155,6 +155,7 @@ want_chars = round(nominal_seconds * CPS)      # 5 秒镜 → 25 字
   "app_name": "Live Clip Studio",
   "port": 8801,
   "project_root": "",
+  "support_url": "",
   "hidden": []
 }
 ```
@@ -163,6 +164,7 @@ want_chars = round(nominal_seconds * CPS)      # 5 秒镜 → 25 字
 |---|---|
 | `port` | 被占用会自动顺延，最多试 12 个 |
 | `project_root` | 项目根目录，留空则用 `<程序目录>/视频项目` |
+| `support_url` | 「♥ 支持作者」跳转地址，留空则入口隐藏 |
 | `hidden` | 从列表里隐藏的项目路径，只影响显示，不动磁盘文件 |
 
 环境变量 `LCS_COMFY_URL` 覆盖 ComfyUI 地址（默认 `http://127.0.0.1:8188`）。
