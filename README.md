@@ -1,6 +1,6 @@
 # Live Clip Studio
 
-[![Sponsor](https://img.shields.io/badge/%E8%B5%9E%E5%8A%A9-%E7%88%B1%E5%8F%91%E7%94%B5-946ce6?style=flat-square)](https://ifdian.net/a/zhangjian77603403)
+[![Sponsor](https://img.shields.io/badge/%E8%B5%9E%E5%8A%A9-%E7%88%B1%E5%8F%91%E7%94%B5-946ce6?style=flat-square)](https://ifdian.net/a/phoom)
 
 本地模型驱动的口播带货短视频生产线：一个桌面工作台 + 一条可复现的生成流水线。
 单主播、单场景、单商品，从商品图到带中文字幕的成片，全程不用手工剪辑。
@@ -187,10 +187,10 @@ want_chars = round(nominal_seconds * CPS)      # 5 秒镜 → 25 字
 在 `config.json` 里填 `support_url` 就会显示：
 
 ```json
-{ "support_url": "https://ifdian.net/a/zhangjian77603403" }
+{ "support_url": "https://ifdian.net/a/phoom" }
 ```
 
-本项目的赞助页：**https://ifdian.net/a/zhangjian77603403**
+本项目的赞助页：**https://ifdian.net/a/phoom**
 
 支持 GitHub Sponsors、爱发电、赞赏码页面等任意链接。
 
